@@ -59,13 +59,14 @@ func main() {
 	mux.Handle("/app/", state.middlewareMetricsInc(apphandler))
 
 	// Registers /healthz route for telling if webpage is ready
-	mux.HandleFunc("/", healthzhandler)
+	// Using the Go standard library, you can specify a method like this: [METHOD ][HOST]/[PATH]
+	mux.HandleFunc("GET /healthz", healthzhandler)
 
 	// Registes /metrics route for getting data on webpage visit number
-	mux.HandleFunc("/metrics/", state.metricshandler)
+	mux.HandleFunc("GET /metrics", state.metricshandler)
 
 	// Registers /reset route for setting metrics data back to 0
-	mux.HandleFunc("/reset/", state.resetmetricshandler)
+	mux.HandleFunc("POST /reset", state.resetmetricshandler)
 
 	// call that starts your HTTP server and keeps it running, continuously listening for incoming HTTP requests.
 	server.ListenAndServe()
