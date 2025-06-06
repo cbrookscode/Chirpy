@@ -20,26 +20,26 @@ func (state *apiConfig) middlewareMetricsInc(og_handler http.Handler) http.Handl
 }
 
 // handler method for metrics counter. needs to be a method for the apiconfig struct as a poitner so that we can access the in memory counter variable when the handler is used.
-func (state *apiConfig) metricshandler(reswriter http.ResponseWriter, webrequest *http.Request) {
+func (state *apiConfig) metricshandler(r http.ResponseWriter, w *http.Request) {
 	val := state.fileserverhits.Load()
-	reswriter.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	reswriter.WriteHeader(200)
-	reswriter.Write([]byte(fmt.Sprintf("Hits: %d", val)))
+	r.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	r.WriteHeader(200)
+	r.Write([]byte(fmt.Sprintf("Hits: %d", val)))
 }
 
 // handler method for reseting metric coutner back to 0. needs to be a method for the apiconfig struct as a poitner so that we can access the in memory counter variable when the handler is used.
-func (state *apiConfig) resetmetricshandler(reswriter http.ResponseWriter, webrequest *http.Request) {
+func (state *apiConfig) resetmetricshandler(r http.ResponseWriter, w *http.Request) {
 	state.fileserverhits.Store(0)
-	reswriter.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	reswriter.WriteHeader(200)
-	reswriter.Write([]byte("Metrics counter has been reset to 0."))
+	r.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	r.WriteHeader(200)
+	r.Write([]byte("Metrics counter has been reset to 0."))
 }
 
 // handler setup for healthz to determine if website is good.
-func healthzhandler(reswriter http.ResponseWriter, webrequest *http.Request) {
-	reswriter.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	reswriter.WriteHeader(200)
-	reswriter.Write([]byte("OK"))
+func healthzhandler(r http.ResponseWriter, w *http.Request) {
+	r.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	r.WriteHeader(200)
+	r.Write([]byte("OK"))
 }
 
 func main() {
