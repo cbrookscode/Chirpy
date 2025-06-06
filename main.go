@@ -22,9 +22,17 @@ func (state *apiConfig) middlewareMetricsInc(og_handler http.Handler) http.Handl
 // handler method for metrics counter. needs to be a method for the apiconfig struct as a poitner so that we can access the in memory counter variable when the handler is used.
 func (state *apiConfig) metricshandler(r http.ResponseWriter, w *http.Request) {
 	val := state.fileserverhits.Load()
-	r.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	r.Header().Set("Content-Type", "text/html; charset=utf-8")
 	r.WriteHeader(200)
-	r.Write([]byte(fmt.Sprintf("Hits: %d", val)))
+	html := fmt.Sprintf(`
+	<html>
+  		<body>
+    		<h1>Welcome, Chirpy Admin</h1>
+    		<p>Chirpy has been visited %d times!</p>
+  		</body>
+	</html>
+	`, val)
+	r.Write([]byte(html))
 }
 
 // handler method for reseting metric coutner back to 0. needs to be a method for the apiconfig struct as a poitner so that we can access the in memory counter variable when the handler is used.
@@ -55,7 +63,7 @@ func main() {
 	}
 
 	// Registers route handling for /app, which will serve files for webpage. Note: mux.Handle requires an http.handler where mux.handlefunc converts the handle function to a http.Handler under the hood.
-	apphandler := http.StripPrefix("/app", http.FileServer(http.Dir(".")))
+	apphandler := http.StripPrefix("/app/", http.FileServer(http.Dir(".")))
 	mux.Handle("/app/", state.middlewareMetricsInc(apphandler))
 
 	// Registers /healthz route for telling if webpage is ready
@@ -63,10 +71,10 @@ func main() {
 	mux.HandleFunc("GET /api/healthz", healthzhandler)
 
 	// Registes /metrics route for getting data on webpage visit number
-	mux.HandleFunc("GET /api/metrics", state.metricshandler)
+	mux.HandleFunc("GET /admin/metrics", state.metricshandler)
 
 	// Registers /reset route for setting metrics data back to 0
-	mux.HandleFunc("POST /api/reset", state.resetmetricshandler)
+	mux.HandleFunc("POST /admin/reset", state.resetmetricshandler)
 
 	// call that starts your HTTP server and keeps it running, continuously listening for incoming HTTP requests.
 	server.ListenAndServe()
