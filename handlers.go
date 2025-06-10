@@ -83,10 +83,11 @@ func respondWithError(w http.ResponseWriter, code int, msg string) {
 	type returnErr struct {
 		Errval string `json:"error"`
 	}
+
+	// Put msg into response struct for marshalling, marshal into json and provide to responsewriter
 	respBody := returnErr{
 		Errval: msg,
 	}
-
 	data, err := json.Marshal(respBody)
 	if err != nil {
 		log.Printf("Error marshalling json response: %s", err)
@@ -104,7 +105,7 @@ func respondWithJSON(w http.ResponseWriter, code int, payload expectedJSON) {
 		CleanedBody string `json:"cleaned_body"`
 	}
 
-	// take out the tsk tsk words
+	// take out the tsk tsk words, put into response struct for marshalling, marshal into json and provide to responsewriter
 	cleaned_txt := cleanstring(payload.Body)
 	respBody := returnVals{
 		CleanedBody: cleaned_txt,
