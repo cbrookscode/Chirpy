@@ -5,12 +5,17 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"sync/atomic"
 )
 
 // in memory struct to keep track of apidata
 type apiConfig struct {
 	fileserverhits atomic.Int32
+}
+
+type expectedJSON struct {
+	Body string `json:"body"`
 }
 
 // wrapper for app handler so that we can increment filserverhits accurately.
@@ -52,15 +57,75 @@ func healthzhandler(r http.ResponseWriter, w *http.Request) {
 	r.Write([]byte("OK"))
 }
 
-// handler to validate if charlen of chirp is 140 characters or less
-func valcharlen(w http.ResponseWriter, r *http.Request) {
-	type expected struct {
-		Body string `json:"body"`
+// replace tsk tsk words with ****
+func cleanstring(text string) string {
+	bad_words := map[string]bool{
+		"kerfuffle": true,
+		"sharbert":  true,
+		"fornax":    true,
+	}
+	words := strings.Split(text, " ")
+	var cleaned []string
+	for _, word := range words {
+		// val, ok := somemap[key]
+		lower_word := strings.ToLower(word)
+		if _, found := bad_words[lower_word]; !found {
+			cleaned = append(cleaned, word)
+		} else {
+			cleaned = append(cleaned, "****")
+		}
+	}
+	final := strings.Join(cleaned, " ")
+	return final
+}
+
+func respondWithError(w http.ResponseWriter, code int, msg string) {
+	type returnErr struct {
+		Errval string `json:"error"`
+	}
+	respBody := returnErr{
+		Errval: msg,
 	}
 
+	data, err := json.Marshal(respBody)
+	if err != nil {
+		log.Printf("Error marshalling json response: %s", err)
+		w.WriteHeader(500)
+		w.Write([]byte("Sorry there was an error on the server marshalling your response"))
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	w.Write(data)
+}
+
+func respondWithJSON(w http.ResponseWriter, code int, payload expectedJSON) {
+	type returnVals struct {
+		CleanedBody string `json:"cleaned_body"`
+	}
+
+	// take out the tsk tsk words
+	cleaned_txt := cleanstring(payload.Body)
+	respBody := returnVals{
+		CleanedBody: cleaned_txt,
+	}
+	data, err := json.Marshal(respBody)
+	if err != nil {
+		log.Printf("Error marshalling json response: %s", err)
+		w.WriteHeader(500)
+		w.Write([]byte("Sorry there was an error on the server marshalling your response"))
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	w.Write(data)
+}
+
+// handler to validate if charlen of chirp is 140 characters or less
+func valcharlen(w http.ResponseWriter, r *http.Request) {
 	// use decoder instead of unmarshal so that we dont need to read the entire io.Reader into memory. Unmarshal would be fine if we already had the full byte slice.
 	decoder := json.NewDecoder(r.Body)
-	params := expected{}
+	params := expectedJSON{}
 	err := decoder.Decode(&params)
 	if err != nil {
 		log.Printf("Error decoding expected json: %s", err)
@@ -71,48 +136,14 @@ func valcharlen(w http.ResponseWriter, r *http.Request) {
 
 	// no issues with expected json from client, continue
 
-	// Setup structs for returning true or false for valid chirp, and for errors
-	type returnVals struct {
-		Body bool `json:"valid"`
-	}
-
-	type returnErr struct {
-		Errval string `json:"error"`
-	}
-
 	// Check length, then prepare marshalled json response.
 	length := len(params.Body)
 
 	// Invalid chirp
 	if length > 140 {
-		respBody := returnErr{
-			Errval: "Chirp is too long",
-		}
-		data, err := json.Marshal(respBody)
-		if err != nil {
-			log.Printf("Error marshalling json response: %s", err)
-			w.WriteHeader(500)
-			w.Write([]byte("Sorry there was an error on the server marshalling your response"))
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(400)
-		w.Write(data)
-		return
+		respondWithError(w, 400, "Chirp is too long")
 	}
 
 	// valid chirp
-	respBody := returnVals{
-		Body: true,
-	}
-	data, err := json.Marshal(respBody)
-	if err != nil {
-		log.Printf("Error marshalling json response: %s", err)
-		w.WriteHeader(500)
-		w.Write([]byte("Sorry there was an error on the server marshalling your response"))
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	w.Write(data)
+	respondWithJSON(w, 200, params)
 }
