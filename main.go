@@ -1,54 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
-	"sync/atomic"
 )
-
-// in memory struct to keep track of apidata
-type apiConfig struct {
-	fileserverhits atomic.Int32
-}
-
-// wrapper for app handler so that we can increment filserverhits accurately.
-func (state *apiConfig) middlewareMetricsInc(og_handler http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		state.fileserverhits.Add(1)
-		og_handler.ServeHTTP(w, r)
-	})
-}
-
-// handler method for metrics counter. needs to be a method for the apiconfig struct as a poitner so that we can access the in memory counter variable when the handler is used.
-func (state *apiConfig) metricshandler(r http.ResponseWriter, w *http.Request) {
-	val := state.fileserverhits.Load()
-	r.Header().Set("Content-Type", "text/html; charset=utf-8")
-	r.WriteHeader(200)
-	html := fmt.Sprintf(`
-	<html>
-  		<body>
-    		<h1>Welcome, Chirpy Admin</h1>
-    		<p>Chirpy has been visited %d times!</p>
-  		</body>
-	</html>
-	`, val)
-	r.Write([]byte(html))
-}
-
-// handler method for reseting metric coutner back to 0. needs to be a method for the apiconfig struct as a poitner so that we can access the in memory counter variable when the handler is used.
-func (state *apiConfig) resetmetricshandler(r http.ResponseWriter, w *http.Request) {
-	state.fileserverhits.Store(0)
-	r.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	r.WriteHeader(200)
-	r.Write([]byte("Metrics counter has been reset to 0."))
-}
-
-// handler setup for healthz to determine if website is good.
-func healthzhandler(r http.ResponseWriter, w *http.Request) {
-	r.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	r.WriteHeader(200)
-	r.Write([]byte("OK"))
-}
 
 func main() {
 	// initialize in memory tracker
@@ -69,6 +23,8 @@ func main() {
 	// Registers /healthz route for telling if webpage is ready
 	// Using the Go standard library, you can specify a method like this: [METHOD ][HOST]/[PATH].  Note that all three parts are optional.
 	mux.HandleFunc("GET /api/healthz", healthzhandler)
+
+	mux.HandleFunc("POST /api/validate_chirp", valcharlen)
 
 	// Registes /metrics route for getting data on webpage visit number
 	mux.HandleFunc("GET /admin/metrics", state.metricshandler)
