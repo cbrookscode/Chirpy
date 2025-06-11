@@ -4,6 +4,8 @@ import (
 	"net/http"
 )
 
+// database connection string: postgres://postgres:postgres@localhost:5432/chirpy
+
 func main() {
 	// initialize in memory tracker
 	state := &apiConfig{}
