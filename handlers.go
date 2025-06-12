@@ -7,11 +7,14 @@ import (
 	"net/http"
 	"strings"
 	"sync/atomic"
+
+	"github.com/cbrookscode/Chirpy/internal/database"
 )
 
 // in memory struct to keep track of apidata
 type apiConfig struct {
 	fileserverhits atomic.Int32
+	dbqueries      *database.Queries
 }
 
 type expectedJSON struct {

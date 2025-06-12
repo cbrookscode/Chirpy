@@ -1,14 +1,31 @@
 package main
 
+// underscore in before import url means its only being used for side effects. In this case it allows us to register the driver needed to open database connection using sql.open()
 import (
+	"database/sql"
+	"fmt"
 	"net/http"
-)
+	"os"
 
-// database connection string: postgres://postgres:postgres@localhost:5432/chirpy
+	"github.com/cbrookscode/Chirpy/internal/database"
+	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
+)
 
 func main() {
 	// initialize in memory tracker
 	state := &apiConfig{}
+
+	// load .env file, get dburl from file, open connection based on dburl, setup new database queries pointer using database.New(), store in app state variable.
+	godotenv.Load(".env")
+	dbURL := os.Getenv("DB_URL")
+	db, err := sql.Open("postgres", dbURL)
+	if err != nil {
+		fmt.Printf("Error %v", err)
+		return
+	}
+	dbQueries := database.New(db)
+	state.dbqueries = dbQueries
 
 	// ServeMux is an HTTP request multiplexer. It matches the URL of each incoming request against a list of registered patterns and calls the handler for the pattern that most closely matches the URL.
 	mux := http.NewServeMux()
